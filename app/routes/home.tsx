@@ -39,8 +39,11 @@ export default function Home() {
     loadResumes()
   }, []);
 
+  
+
   return <main className="bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 min-h-screen">
     <Navbar />
+    
 
     <section className="main-section">
       <div className="page-heading py-16">
