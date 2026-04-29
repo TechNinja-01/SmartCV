@@ -6,28 +6,25 @@ This guide explains how to set up the API keys required for the new features in 
 
 Your application now uses two external APIs:
 
-1. **OpenAI API** - for the Interview Question Generator
+1. **Gemini API** - for the Interview Question Generator
 2. **JSearch API** - for the Job Search Module
 
 ---
 
-## 1. OpenAI API Setup (Interview Questions)
+## 1. Gemini API Setup (Interview Questions)
 
-### Step 1: Create an OpenAI Account
-1. Go to [https://platform.openai.com/signup](https://platform.openai.com/signup)
-2. Sign up for a new account or log in if you already have one
+### Step 1: Create a Google AI Studio Key
+1. Go to [https://aistudio.google.com/app/apikey](https://aistudio.google.com/app/apikey)
+2. Sign in with your Google account
 
 ### Step 2: Get Your API Key
-1. Navigate to [https://platform.openai.com/api-keys](https://platform.openai.com/api-keys)
-2. Click "Create new secret key"
-3. Give it a descriptive name like "SmartCV Interview Generator"
+1. In AI Studio, click "Create API key"
+2. Give it a descriptive name like "SmartCV Interview Generator"
 4. Copy the API key immediately (you won't be able to see it again)
 
-### Step 3: Add Credits (if needed)
-- OpenAI requires you to add credits to your account
-- Go to [https://platform.openai.com/account/billing](https://platform.openai.com/account/billing)
-- Add at least $5 to start (you can always add more later)
-- The app uses GPT-3.5-turbo which costs approximately $0.002 per generation
+### Step 3: Save the key securely
+- Keep the key private and do not commit it
+- Add it to your local `.env` file only
 
 ---
 
@@ -59,8 +56,8 @@ Your application now uses two external APIs:
 2. Copy the contents from `.env.example`:
 
 ```bash
-# OpenAI API Key (for Interview Question Generator)
-VITE_OPENAI_API_KEY=your_openai_api_key_here
+# Gemini API Key (for Interview Question Generator)
+GEMINI_API_KEY=your_gemini_api_key_here
 
 # JSearch API Key (for Job Search)
 VITE_JSEARCH_API_KEY=your_jsearch_api_key_here
@@ -71,7 +68,7 @@ Replace the placeholder values with your actual API keys:
 
 ```bash
 # Example (use your actual keys):
-VITE_OPENAI_API_KEY=sk-proj-abc123xyz456...
+GEMINI_API_KEY=AIza...
 VITE_JSEARCH_API_KEY=def789ghi012...
 ```
 
@@ -114,7 +111,7 @@ npm run dev
 - The `.env.example` file shows the format but contains no real keys
 
 ### If Your Keys Are Compromised:
-1. **OpenAI**: Go to your API keys page and delete the compromised key
+1. **Gemini**: Go to Google AI Studio and rotate/delete the compromised key
 2. **RapidAPI**: Go to your dashboard and rotate your key
 3. Generate new keys and update your `.env` file
 
@@ -122,11 +119,9 @@ npm run dev
 
 ## Cost Estimates
 
-### OpenAI (Interview Questions)
-- Model: GPT-3.5-turbo
-- Cost: ~$0.002 per request (10 questions)
-- 100 generations = ~$0.20
-- Very affordable for personal use
+### Gemini (Interview Questions)
+- Model: gemini-2.5-flash
+- Pricing varies by Google AI Studio terms
 
 ### JSearch (Job Search)
 - Free tier: 2,500 requests/month
@@ -138,9 +133,9 @@ npm run dev
 
 ## Troubleshooting
 
-### Error: "OpenAI API key not configured"
+### Error: "API key not configured on server"
 - Make sure your `.env` file is in the project root
-- Check that the variable name is exactly `VITE_OPENAI_API_KEY`
+- Check that the variable name is exactly `GEMINI_API_KEY`
 - Restart your dev server after adding the key
 
 ### Error: "JSearch API key not configured"
@@ -150,8 +145,7 @@ npm run dev
 - Restart your dev server after adding the key
 
 ### Interview Questions Not Generating
-- Check your OpenAI account has available credits
-- Verify your API key is valid
+- Verify your Gemini API key is valid
 - Check browser console for error messages
 
 ### Job Search Returns No Results
@@ -171,5 +165,5 @@ If you continue to experience issues:
 4. Try the examples provided in the testing section
 
 For API-specific issues:
-- **OpenAI**: [https://help.openai.com](https://help.openai.com)
+- **Gemini**: [https://ai.google.dev/gemini-api/docs](https://ai.google.dev/gemini-api/docs)
 - **RapidAPI/JSearch**: [https://support.rapidapi.com](https://support.rapidapi.com)

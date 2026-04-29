@@ -42,8 +42,8 @@ Create a new file named `.env` (note the dot at the start)
 Open the `.env` file and add your keys:
 
 ```bash
-# OpenAI API Key (for Interview Question Generator)
-VITE_OPENAI_API_KEY=sk-proj-abc123xyz456...
+# Gemini API Key (for Interview Question Generator)
+GEMINI_API_KEY=AIza...
 
 # JSearch API Key (for Job Search)
 VITE_JSEARCH_API_KEY=def789ghi012...
@@ -59,15 +59,15 @@ VITE_JSEARCH_API_KEY=def789ghi012...
 
 ## Where to Get Each API Key
 
-### OpenAI API Key
+### Gemini API Key
 
-1. **Get the key from**: https://platform.openai.com/api-keys
-2. **It looks like**: `sk-proj-...` (starts with `sk-proj-` or `sk-`)
-3. **Paste it after**: `VITE_OPENAI_API_KEY=`
+1. **Get the key from**: https://aistudio.google.com/app/apikey
+2. **It looks like**: `AIza...`
+3. **Paste it after**: `GEMINI_API_KEY=`
 
 **Example**:
 ```bash
-VITE_OPENAI_API_KEY=sk-proj-1234567890abcdefghijklmnop
+GEMINI_API_KEY=AIzaSyExampleKey
 ```
 
 ---
@@ -90,7 +90,7 @@ VITE_JSEARCH_API_KEY=a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6
 Your complete `.env` file should look like this:
 
 ```bash
-VITE_OPENAI_API_KEY=sk-proj-1234567890abcdefghijklmnop
+GEMINI_API_KEY=AIzaSyExampleKey
 VITE_JSEARCH_API_KEY=a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6
 ```
 
@@ -103,7 +103,7 @@ VITE_JSEARCH_API_KEY=a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6
 │
 ├── 📄 .env                    ← YOUR API KEYS GO HERE!
 │   └── Contains:
-│       VITE_OPENAI_API_KEY=sk-proj-...
+│       GEMINI_API_KEY=AIza...
 │       VITE_JSEARCH_API_KEY=...
 │
 ├── 📄 .env.example            ← Template (no real keys)
@@ -112,7 +112,7 @@ VITE_JSEARCH_API_KEY=a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6
 │
 ├── 📁 app/
 │   ├── 📁 routes/
-│   │   ├── interview.tsx      ← Uses VITE_OPENAI_API_KEY
+│   │   ├── api.generate-questions.ts ← Uses GEMINI_API_KEY
 │   │   ├── jobs.tsx           ← Uses VITE_JSEARCH_API_KEY
 │   │   └── ...
 │   └── ...
@@ -124,9 +124,9 @@ VITE_JSEARCH_API_KEY=a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6
 
 ## How the App Uses These Keys
 
-### In `app/routes/interview.tsx` (Line ~44):
+### In `app/routes/api.generate-questions.ts`:
 ```typescript
-const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY;
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
 ```
 
 ### In `app/routes/jobs.tsx` (Line ~49):
@@ -148,20 +148,20 @@ The app automatically reads from `.env` when you use `import.meta.env.VARIABLE_N
 
 ❌ **Wrong**: Adding quotes around values
 ```bash
-VITE_OPENAI_API_KEY="sk-proj-123"  ❌
+GEMINI_API_KEY="AIza..."  ❌
 ```
 ✅ **Correct**: No quotes
 ```bash
-VITE_OPENAI_API_KEY=sk-proj-123  ✅
+GEMINI_API_KEY=AIza...  ✅
 ```
 
 ❌ **Wrong**: Spaces around equals sign
 ```bash
-VITE_OPENAI_API_KEY = sk-proj-123  ❌
+GEMINI_API_KEY = AIza...  ❌
 ```
 ✅ **Correct**: No spaces
 ```bash
-VITE_OPENAI_API_KEY=sk-proj-123  ✅
+GEMINI_API_KEY=AIza...  ✅
 ```
 
 ---
@@ -181,7 +181,7 @@ npm run dev
 1. Go to http://localhost:5173/interview
 2. Fill in the form
 3. Click "Generate Questions"
-4. If you see questions → OpenAI key works! ✅
+4. If you see questions → Gemini key works! ✅
 
 **Test Job Search**:
 1. Go to http://localhost:5173/jobs
@@ -201,8 +201,8 @@ npm run dev
 
 **Common errors**:
 
-"OpenAI API key not configured"
-→ Check `.env` file exists and has `VITE_OPENAI_API_KEY`
+"API key not configured on server"
+→ Check `.env` file exists and has `GEMINI_API_KEY`
 
 "API error: 401 Unauthorized"
 → Your API key is invalid or incorrect

@@ -15,8 +15,8 @@ Copy the example file:
 cp .env.example .env
 ```
 
-### Get OpenAI API Key (for Interview Questions)
-1. Go to https://platform.openai.com/api-keys
+### Get Gemini API Key (for Interview Questions)
+1. Go to https://aistudio.google.com/app/apikey
 2. Create new key
 3. Copy the key
 
@@ -27,7 +27,7 @@ cp .env.example .env
 
 ### Add keys to .env
 ```bash
-VITE_OPENAI_API_KEY=sk-proj-your-key-here
+GEMINI_API_KEY=your-gemini-key-here
 VITE_JSEARCH_API_KEY=your-rapidapi-key-here
 ```
 
@@ -61,12 +61,11 @@ Visit: `http://localhost:5173`
 
 ### "API key not configured" error?
 - Check `.env` file exists in project root
-- Verify variable names are exactly: `VITE_OPENAI_API_KEY` and `VITE_JSEARCH_API_KEY`
+- Verify variable names are exactly: `GEMINI_API_KEY` and `VITE_JSEARCH_API_KEY`
 - Restart dev server after adding keys
 
 ### No questions generating?
-- Verify OpenAI key is valid
-- Check you have credits in your OpenAI account
+- Verify Gemini key is valid
 - Check browser console for errors
 
 ### No jobs appearing?

@@ -6,7 +6,7 @@
 
 - [x] **Interview Question Generator** (`/interview`)
   - Generates 10 custom interview questions
-  - Uses OpenAI GPT-3.5-turbo
+  - Uses Gemini (`gemini-2.5-flash`)
   - Question categories and difficulty levels
   - Regenerate functionality
   - Full error handling
@@ -63,12 +63,12 @@
 
 ### Step 1: API Keys
 User needs to obtain:
-- [ ] OpenAI API key from https://platform.openai.com/api-keys
+- [ ] Gemini API key from https://aistudio.google.com/app/apikey
 - [ ] JSearch API key from https://rapidapi.com (JSearch API)
 
 ### Step 2: Configuration
 - [ ] Create `.env` file in project root
-- [ ] Add `VITE_OPENAI_API_KEY=...`
+- [ ] Add `GEMINI_API_KEY=...`
 - [ ] Add `VITE_JSEARCH_API_KEY=...`
 
 ### Step 3: Run Application
@@ -144,11 +144,10 @@ These are harmless warnings from React imports and can be ignored.
 
 ## API Costs
 
-### OpenAI
-- **Model**: GPT-3.5-turbo
-- **Cost per request**: ~$0.002
-- **100 generations**: ~$0.20
-- **Setup required**: Credit card + minimum $5 deposit
+### Gemini
+- **Model**: gemini-2.5-flash
+- **Cost**: Based on Google AI Studio pricing
+- **Setup required**: Google AI Studio API key
 
 ### JSearch
 - **Free tier**: 2,500 requests/month
@@ -177,7 +176,7 @@ These are harmless warnings from React imports and can be ignored.
 ### Environment Variables in Production
 When deploying, ensure these environment variables are set:
 ```
-VITE_OPENAI_API_KEY
+GEMINI_API_KEY
 VITE_JSEARCH_API_KEY
 ```
 

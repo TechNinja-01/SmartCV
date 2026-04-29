@@ -22,7 +22,7 @@ Generate customized interview questions based on:
 - Regenerate button to get fresh questions
 - Clean, intuitive UI with color-coded badges
 
-**Technology**: OpenAI GPT-3.5-turbo API
+**Technology**: Gemini API (`gemini-2.5-flash`)
 
 ---
 
@@ -105,8 +105,8 @@ app/
 ```
 
 ### API Integration
-Both new features use client-side API calls:
-- Interview Questions: Direct OpenAI API integration
+Both new features use API calls:
+- Interview Questions: Server route integration with Gemini API
 - Job Search: RapidAPI/JSearch integration
 - Environment variables for API key configuration
 
@@ -122,12 +122,12 @@ Both new features use client-side API calls:
 ### 1. Environment Variables
 Create a `.env` file in the project root:
 ```bash
-VITE_OPENAI_API_KEY=your_openai_api_key
+GEMINI_API_KEY=your_gemini_api_key
 VITE_JSEARCH_API_KEY=your_jsearch_api_key
 ```
 
 ### 2. API Keys Needed
-- **OpenAI API Key**: For interview questions
+- **Gemini API Key**: For interview questions
 - **JSearch API Key**: For job search
 
 **See `API_SETUP.md` for detailed setup instructions.**
@@ -210,9 +210,8 @@ Both new features include comprehensive error handling:
 
 ## Cost Considerations
 
-### Interview Questions (OpenAI)
-- ~$0.002 per generation (10 questions)
-- Very affordable for regular use
+### Interview Questions (Gemini)
+- Usage is billed per Google AI Studio pricing
 
 ### Job Search (JSearch)
 - Free tier: 2,500 requests/month

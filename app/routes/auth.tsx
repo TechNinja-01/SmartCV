@@ -2,20 +2,22 @@ import { useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 import { usePuterStore } from '~/lib/puter';
 
-export const meta=()=>{[
-    {title:'Resumind | Auth'},
-    {name:'description', content:'Log in into your account'}
-]}
+export const meta = () => [
+  { title: 'SmartCV | Auth' },
+  { name: 'description', content: 'Log in to continue your job journey' },
+];
 
 const auth = () => {
-    const {isLoading, auth} =usePuterStore();
-    const location=useLocation();
-    const next=location.search.split('next=')[1];
-    const navigate=useNavigate();
+    const {isLoading, auth} = usePuterStore();
+    const location = useLocation();
+    const navigate = useNavigate();
+    const next = new URLSearchParams(location.search).get('next') || '/';
 
-    useEffect(()=>{
-        if(auth.isAuthenticated) navigate(next);
-    },[auth.isAuthenticated,next])
+    useEffect(() => {
+        if (auth.isAuthenticated) {
+            navigate(next);
+        }
+    }, [auth.isAuthenticated, next, navigate]);
 
   return (
     <main className={`bg-[url('/images/bg-main.svg')] bg-cover min-h-screen flex items-center justify-center`}>

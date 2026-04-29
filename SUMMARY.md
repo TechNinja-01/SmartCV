@@ -13,14 +13,14 @@ Your SmartCV application has been successfully expanded with two new features wh
 
 A complete interview preparation tool that:
 - Accepts job title, experience level, and optional job description
-- Uses OpenAI GPT-3.5-turbo API to generate 10 custom interview questions
+- Uses Gemini API to generate 10 custom interview questions
 - Displays questions with category badges (Technical/Behavioral/Situational)
 - Shows difficulty levels (Easy/Medium/Hard)
 - Includes a "Regenerate" button for fresh questions
 - Features comprehensive error handling and loading states
 
 **Key Features**:
-- Real-time generation using OpenAI API
+- Real-time generation using Gemini API
 - Color-coded question categories
 - Responsive card-based layout
 - Form validation
@@ -82,7 +82,7 @@ Template for environment variables with clear instructions
 
 ### 2. `API_SETUP.md`
 Comprehensive guide covering:
-- OpenAI account creation and API key setup
+- Gemini API key setup
 - JSearch/RapidAPI subscription process
 - Environment variable configuration
 - Security best practices
@@ -154,11 +154,9 @@ Implementation overview and setup guide
 
 ## API Integration
 
-### OpenAI API (Interview Questions)
-- **Endpoint**: `https://api.openai.com/v1/chat/completions`
-- **Model**: GPT-3.5-turbo
-- **Cost**: ~$0.002 per generation
-- **Environment Variable**: `VITE_OPENAI_API_KEY`
+### Gemini API (Interview Questions)
+- **Model**: `gemini-2.5-flash`
+- **Environment Variable**: `GEMINI_API_KEY` (server-side)
 
 ### JSearch API (Job Search)
 - **Endpoint**: `https://jsearch.p.rapidapi.com/search`
@@ -170,12 +168,11 @@ Implementation overview and setup guide
 
 ## Setup Instructions for User
 
-### Step 1: Get OpenAI API Key
-1. Visit https://platform.openai.com/signup
-2. Navigate to https://platform.openai.com/api-keys
-3. Click "Create new secret key"
-4. Copy the key (starts with `sk-proj-`)
-5. Add at least $5 in credits to your account
+### Step 1: Get Gemini API Key
+1. Visit https://aistudio.google.com/app/apikey
+2. Sign in with your Google account
+3. Click "Create API key"
+4. Copy the generated key
 
 ### Step 2: Get JSearch API Key
 1. Visit https://rapidapi.com/auth/sign-up
@@ -187,7 +184,7 @@ Implementation overview and setup guide
 1. Create `.env` file in project root
 2. Add both API keys:
 ```bash
-VITE_OPENAI_API_KEY=sk-proj-your-key-here
+GEMINI_API_KEY=your-gemini-key-here
 VITE_JSEARCH_API_KEY=your-rapidapi-key-here
 ```
 
