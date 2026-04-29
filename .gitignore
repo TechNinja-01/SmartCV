@@ -6,3 +6,9 @@
 /build/
 .env
 .env.local
+
+# Logs
+*.log
+
+# Common build output
+dist/

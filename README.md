@@ -11,7 +11,7 @@ A comprehensive career platform featuring AI-powered resume analysis, interview 
 - Resume history and tracking
 
 ### 💼 Interview Question Generator (NEW!)
-- Generate custom interview questions using OpenAI
+- Generate custom interview questions using Gemini
 - Tailored to job title, experience level, and description
 - Questions categorized by type and difficulty
 - Regenerate for fresh questions anytime
@@ -33,7 +33,7 @@ A comprehensive career platform featuring AI-powered resume analysis, interview 
 - ⚡️ React Router v7
 - 🎨 TailwindCSS v4
 - 🔐 Puter.js for authentication & storage
-- 🤖 OpenAI API for interview questions
+- 🤖 Gemini API for interview questions
 - 💼 JSearch API for job listings
 - 🔒 TypeScript
 - 📦 Vite
@@ -48,7 +48,7 @@ npm install
 ### 2. Configure API Keys
 Create a `.env` file (see `.env.example`):
 ```bash
-VITE_OPENAI_API_KEY=your_openai_api_key_here
+GEMINI_API_KEY=your_gemini_api_key_here
 VITE_JSEARCH_API_KEY=your_jsearch_api_key_here
 ```
 
@@ -69,10 +69,9 @@ Visit `http://localhost:5173`
 
 ## API Keys Required
 
-### OpenAI API (Interview Questions)
-- Sign up at: https://platform.openai.com/signup
-- Get API key: https://platform.openai.com/api-keys
-- Cost: ~$0.002 per generation
+### Gemini API (Interview Questions)
+- Get API key: https://aistudio.google.com/app/apikey
+- Model used: `gemini-2.5-flash`
 
 ### JSearch API (Job Search)
 - Sign up at: https://rapidapi.com
