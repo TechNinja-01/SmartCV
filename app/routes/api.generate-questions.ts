@@ -1,4 +1,5 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import type { ActionFunctionArgs } from 'react-router';
+import { callGeminiWithFallback, GEMINI_UNAVAILABLE_MESSAGE } from '~/lib/gemini';
 
 export async function loader() {
   return Response.json(
@@ -7,19 +8,25 @@ export async function loader() {
   );
 }
 
-export async function action({ request }: any) {
-  const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-
-  if (!GEMINI_API_KEY) {
+export async function action({ request }: ActionFunctionArgs) {
+  if (request.method !== 'POST') {
     return Response.json(
-      { error: 'API key not configured on server.' },
-      { status: 500 }
+      { error: 'Method not allowed' },
+      { status: 405 }
     );
   }
 
-  const { jobTitle, experienceLevel, jobDescription } = await request.json();
+  const GEMINI_API_KEY = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+  if (!GEMINI_API_KEY) {
+    return Response.json({ error: 'API key not configured on server.' }, { status: 500 });
+  }
 
-  if (!jobTitle || !experienceLevel) {
+  const { jobTitle, experienceLevel, jobDescription } = await request.json();
+  const normalizedJobTitle = (jobTitle || '').trim();
+  const normalizedExperienceLevel = (experienceLevel || '').trim();
+  const normalizedJobDescription = (jobDescription || '').trim();
+
+  if (!normalizedJobTitle || !normalizedExperienceLevel) {
     return Response.json(
       { error: 'Missing required fields' }, 
       { status: 400 }
@@ -28,8 +35,8 @@ export async function action({ request }: any) {
 
   // Using the improved prompt from the new code
   const prompt = `
-    Generate 10 interview questions for a ${experienceLevel} ${jobTitle} position.
-    ${jobDescription ? `Job Description: ${jobDescription}` : ''}
+    Generate 10 interview questions for a ${normalizedExperienceLevel} ${normalizedJobTitle} position.
+    ${normalizedJobDescription ? `Job Description: ${normalizedJobDescription}` : ''}
 
     Return the questions strictly as a JSON array with this structure:
     [
@@ -47,26 +54,16 @@ export async function action({ request }: any) {
   `;
 
   try {
-    const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-    
-    // Initialize model with JSON mode enabled (New Code functionality)
-    const model = genAI.getGenerativeModel({ 
-      model: 'gemini-2.5-flash', // Ensure this model name is correct for your access level
-      generationConfig: {
-        responseMimeType: "application/json"
-      }
+    const text = await callGeminiWithFallback(prompt, {
+      responseMimeType: 'application/json',
     });
-
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    
-    // Use the cleaner 'text()' method (Old Code style) 
-    // This works perfectly with JSON mode
-    const text = response.text(); 
 
     // Parse JSON safely without needing regex replacement
     try {
       const parsedQuestions = JSON.parse(text);
+      if (!Array.isArray(parsedQuestions)) {
+        throw new Error('AI returned an invalid payload shape.');
+      }
       return Response.json(parsedQuestions);
     } catch (parseError) {
       console.error('Gemini API returned invalid JSON:', text);
@@ -77,6 +74,13 @@ export async function action({ request }: any) {
     }
   } catch (err: any) {
     console.error('Gemini API Error:', err);
+    const message = typeof err?.message === 'string' ? err.message : '';
+    if (message === GEMINI_UNAVAILABLE_MESSAGE) {
+      return Response.json(
+        { error: GEMINI_UNAVAILABLE_MESSAGE, code: 'GEMINI_UNAVAILABLE' },
+        { status: 503 }
+      );
+    }
     return Response.json(
       { error: err.message || 'Failed to generate questions' },
       { status: 500 }
