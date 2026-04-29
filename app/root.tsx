@@ -53,6 +53,14 @@ export default function App() {
     init();
   },[init])
 
+  useEffect(() => {
+    const theme = localStorage.getItem('smartcv_theme') || 'light';
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, []);
 
   return <Outlet />;
 }
