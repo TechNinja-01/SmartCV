@@ -1,19 +1,28 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router';
 import ErrorState from '~/components/ErrorState';
 import LoadingState from '~/components/LoadingState';
 import Navbar from '~/components/Navbar';
 import { normalizeAppErrorMessage } from '~/lib/errors';
 import { usePuterStore } from '~/lib/puter';
+import { generateUUID } from '~/lib/utils';
 
 interface CoverLetterPayload {
   jobTitle: string;
   companyName: string;
   jobDescription: string;
-  personalSummary: string;
+  background: string;
 }
 
 const COVER_LETTER_KEY = 'smartcv_cover_letters';
+
+type CoverLetterHistoryItem = {
+  id: string;
+  jobTitle: string;
+  company: string;
+  content: string;
+  createdAt: string;
+};
 
 const CoverLetterRoute = () => {
   const { auth, isLoading, ai, kv } = usePuterStore();
@@ -23,6 +32,8 @@ const CoverLetterRoute = () => {
   const [coverLetter, setCoverLetter] = useState('');
   const [lastPayload, setLastPayload] = useState<CoverLetterPayload | null>(null);
   const [copyStatus, setCopyStatus] = useState('');
+  const [history, setHistory] = useState<CoverLetterHistoryItem[]>([]);
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   useEffect(() => {
     if (!isLoading && !auth.isAuthenticated) {
@@ -30,32 +41,75 @@ const CoverLetterRoute = () => {
     }
   }, [auth.isAuthenticated, isLoading, navigate]);
 
+  useEffect(() => {
+    const loadHistory = async () => {
+      try {
+        const raw = await kv.get(COVER_LETTER_KEY);
+        if (!raw) {
+          setHistory([]);
+          return;
+        }
+        const parsed = JSON.parse(raw) as unknown;
+        if (!Array.isArray(parsed)) {
+          setHistory([]);
+          return;
+        }
+        const normalized: CoverLetterHistoryItem[] = (parsed as unknown[]).flatMap(
+          (entry): CoverLetterHistoryItem[] => {
+            if (!entry || typeof entry !== 'object') return [];
+            const item = entry as Record<string, unknown>;
+            const id = typeof item.id === 'string' ? item.id : '';
+            const jobTitle = typeof item.jobTitle === 'string' ? item.jobTitle : '';
+            const company = typeof item.company === 'string' ? item.company : '';
+            const content = typeof item.content === 'string' ? item.content : '';
+            const createdAt = typeof item.createdAt === 'string' ? item.createdAt : '';
+            if (!id || !content) return [];
+            return [{ id, jobTitle, company, content, createdAt }];
+          }
+        );
+        setHistory(normalized);
+      } catch {
+        setHistory([]);
+      }
+    };
+
+    if (!isLoading && auth.isAuthenticated) {
+      loadHistory();
+    }
+  }, [auth.isAuthenticated, isLoading, kv]);
+
   const generateCoverLetter = async (payload: CoverLetterPayload) => {
     setIsGenerating(true);
     setError('');
     setCopyStatus('');
     try {
-      const prompt = `Write a professional cover letter around 300 words.
-Job Title: ${payload.jobTitle}
-Company Name: ${payload.companyName}
-Job Description: ${payload.jobDescription}
-Candidate Summary: ${payload.personalSummary}
+      const response = await fetch('/api/generate-cover-letter', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jobTitle: payload.jobTitle,
+          companyName: payload.companyName,
+          jobDescription: payload.jobDescription,
+          background: payload.background,
+        }),
+      });
 
-Return plain text only.`;
+      if (!response.ok) {
+        const responseBody = await response.json().catch(() => null);
+        const errorMessage =
+          responseBody && typeof responseBody.error === 'string'
+            ? responseBody.error
+            : `API error: ${response.statusText}`;
+        throw new Error(errorMessage);
+      }
 
-      const response = await ai.chat(prompt, { model: 'gpt-4.1-nano' });
-      const content = response?.message?.content;
-      const generatedText =
-        typeof content === 'string' ? content : content?.[0]?.text ?? '';
+      const data = (await response.json()) as { content?: string };
+      const generatedText = typeof data.content === 'string' ? data.content : '';
       if (!generatedText.trim()) {
         throw new Error('Cover letter generation returned an empty response.');
       }
 
       setCoverLetter(generatedText.trim());
-      const existingRaw = await kv.get(COVER_LETTER_KEY);
-      const existing = existingRaw ? (JSON.parse(existingRaw) as string[]) : [];
-      const next = [generatedText.trim(), ...existing].slice(0, 10);
-      await kv.set(COVER_LETTER_KEY, JSON.stringify(next));
     } catch (err) {
       setError(
         normalizeAppErrorMessage(err, {
@@ -67,6 +121,22 @@ Return plain text only.`;
     }
   };
 
+  const saveToHistory = async () => {
+    if (!lastPayload || !coverLetter.trim()) return;
+
+    const nextItem: CoverLetterHistoryItem = {
+      id: generateUUID(),
+      jobTitle: lastPayload.jobTitle,
+      company: lastPayload.companyName,
+      content: coverLetter.trim(),
+      createdAt: new Date().toISOString(),
+    };
+
+    const next = [nextItem, ...history].slice(0, 20);
+    setHistory(next);
+    await kv.set(COVER_LETTER_KEY, JSON.stringify(next));
+  };
+
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
@@ -74,9 +144,9 @@ Return plain text only.`;
       jobTitle: String(formData.get('job-title') || '').trim(),
       companyName: String(formData.get('company-name') || '').trim(),
       jobDescription: String(formData.get('job-description') || '').trim(),
-      personalSummary: String(formData.get('personal-summary') || '').trim(),
+      background: String(formData.get('background') || '').trim(),
     };
-    if (!payload.jobTitle || !payload.companyName || !payload.jobDescription || !payload.personalSummary) {
+    if (!payload.jobTitle || !payload.companyName || !payload.jobDescription || !payload.background) {
       setError('Please fill in all fields.');
       return;
     }
@@ -95,7 +165,7 @@ Return plain text only.`;
   };
 
   return (
-    <main className="bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 min-h-screen">
+    <main className="bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 min-h-screen">
       <Navbar />
       <section className="main-section">
         <div className="page-heading py-16">
@@ -104,7 +174,7 @@ Return plain text only.`;
         </div>
         <div className="w-full max-w-4xl">
           <div className="gradient-border">
-            <div className="bg-white rounded-2xl p-8">
+            <div className="bg-white dark:bg-gray-900 rounded-2xl p-8">
               <form onSubmit={handleSubmit} className="flex flex-col gap-6">
                 <div className="form-div">
                   <label htmlFor="job-title">Job Title</label>
@@ -119,10 +189,10 @@ Return plain text only.`;
                   <textarea id="job-description" name="job-description" rows={5} />
                 </div>
                 <div className="form-div">
-                  <label htmlFor="personal-summary">Personal Summary</label>
+                  <label htmlFor="background">Your Background</label>
                   <textarea
-                    id="personal-summary"
-                    name="personal-summary"
+                    id="background"
+                    name="background"
                     rows={4}
                     placeholder="2-3 sentences about your background and strengths"
                   />
@@ -135,7 +205,7 @@ Return plain text only.`;
                 )}
                 <div className="flex gap-3">
                   <button className="primary-button" type="submit" disabled={isGenerating}>
-                    {isGenerating ? 'Generating...' : 'Generate'}
+                    {isGenerating ? 'Generating...' : 'Generate Cover Letter'}
                   </button>
                   {lastPayload && !isGenerating && (
                     <button
@@ -153,9 +223,13 @@ Return plain text only.`;
           </div>
           {isGenerating && <LoadingState message="Generating cover letter..." imageAlt="Generating cover letter" />}
           {coverLetter && !isGenerating && (
-            <div className="mt-8 bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
-              <h3 className="text-xl font-semibold text-gray-800 mb-3">Generated Cover Letter</h3>
-              <pre className="whitespace-pre-wrap text-sm text-gray-700 font-sans">{coverLetter}</pre>
+            <div className="mt-8 bg-white dark:bg-gray-900 rounded-2xl p-6 border border-gray-100 dark:border-gray-800 shadow-sm">
+              <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-3">Generated Cover Letter</h3>
+              <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-gradient-to-b from-white to-gray-50 dark:from-gray-900 dark:to-gray-950 p-5 shadow-inner">
+                <pre className="whitespace-pre-wrap text-sm text-gray-700 dark:text-gray-200 font-sans leading-relaxed">
+                  {coverLetter}
+                </pre>
+              </div>
               <div className="mt-4 flex items-center gap-3">
                 <button
                   type="button"
@@ -164,10 +238,42 @@ Return plain text only.`;
                 >
                   Copy to Clipboard
                 </button>
+                <button
+                  type="button"
+                  className="px-5 py-2 rounded-full bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700 font-medium hover:bg-gray-200 transition-colors"
+                  onClick={saveToHistory}
+                >
+                  Save to History
+                </button>
                 {copyStatus && <span className="text-sm text-gray-600">{copyStatus}</span>}
               </div>
             </div>
           )}
+
+          <details className="mt-6 bg-white dark:bg-gray-900 rounded-2xl p-6 border border-gray-100 dark:border-gray-800 shadow-sm" open={historyOpen} onToggle={(e) => setHistoryOpen((e.currentTarget as HTMLDetailsElement).open)}>
+            <summary className="cursor-pointer text-lg font-semibold text-gray-800 dark:text-gray-100">
+              Previous Cover Letters
+            </summary>
+            <div className="mt-4 space-y-4">
+              {history.length === 0 ? (
+                <p className="text-gray-600 dark:text-gray-300">No saved cover letters yet.</p>
+              ) : (
+                history.slice(0, 3).map((item) => (
+                  <div key={item.id} className="rounded-2xl border border-gray-200 dark:border-gray-700 p-4">
+                    <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">
+                      {item.jobTitle} • {item.company}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      {item.createdAt ? new Date(item.createdAt).toLocaleString() : ''}
+                    </p>
+                    <pre className="mt-3 whitespace-pre-wrap text-sm text-gray-700 dark:text-gray-200 font-sans leading-relaxed">
+                      {item.content}
+                    </pre>
+                  </div>
+                ))
+              )}
+            </div>
+          </details>
         </div>
       </section>
     </main>

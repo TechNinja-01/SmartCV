@@ -388,7 +388,7 @@ Return JSON: { situation: string, task: string, action: string, result: string }
   };
 
   return (
-    <main className="bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 min-h-screen">
+    <main className="bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 min-h-screen">
       <Navbar />
 
       <section className="main-section">
@@ -399,7 +399,7 @@ Return JSON: { situation: string, task: string, action: string, result: string }
 
         <div className="w-full max-w-4xl">
           <div className="gradient-border">
-            <div className="bg-white rounded-2xl p-8">
+            <div className="bg-white dark:bg-gray-900 rounded-2xl p-8">
               <form onSubmit={handleSubmit} className="flex flex-col gap-6">
                 <div className="form-div">
                   <label htmlFor="job-title">Job Title *</label>
@@ -497,7 +497,7 @@ Return JSON: { situation: string, task: string, action: string, result: string }
           {questions.length > 0 && !isGenerating && (
             <div className="mt-10 space-y-6 animate-in fade-in duration-1000">
               <div className="flex items-center justify-between gap-3">
-                <h3 className="text-2xl font-semibold text-gray-800">
+                <h3 className="text-2xl font-semibold text-gray-800 dark:text-gray-100">
                   Interview Questions ({mode === 'browse' ? filteredQuestions.length : questions.length} shown)
                 </h3>
                 <div className="flex gap-2 rounded-full border border-gray-200 bg-white p-1">
@@ -531,7 +531,7 @@ Return JSON: { situation: string, task: string, action: string, result: string }
 
               {mode === 'browse' ? (
                 <>
-                  <div className="bg-white rounded-2xl p-4 border border-gray-100 space-y-3">
+                  <div className="bg-white dark:bg-gray-900 rounded-2xl p-4 border border-gray-100 dark:border-gray-800 space-y-3">
                     <div>
                       <p className="text-sm font-semibold text-gray-700 mb-2">Difficulty</p>
                       <div className="flex flex-wrap gap-2">
@@ -576,7 +576,7 @@ Return JSON: { situation: string, task: string, action: string, result: string }
                   </div>
                   <div className="space-y-4">
                     {filteredQuestions.length === 0 && (
-                      <div className="bg-white rounded-2xl p-6 border border-gray-100 text-gray-600">
+                      <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 border border-gray-100 dark:border-gray-800 text-gray-600 dark:text-gray-300">
                         No questions match the selected filters
                       </div>
                     )}
@@ -591,7 +591,7 @@ Return JSON: { situation: string, task: string, action: string, result: string }
                       return (
                     <div
                       key={`${q.question}-${q.category}-${q.difficulty}`}
-                      className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow"
+                      className="bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-800 hover:shadow-md transition-shadow"
                     >
                       <div className="flex items-start gap-4">
                         <div className="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white font-semibold">
@@ -599,7 +599,7 @@ Return JSON: { situation: string, task: string, action: string, result: string }
                         </div>
                         <div className="flex-1">
                           <div className="flex items-start justify-between gap-3">
-                          <p className="text-lg text-gray-800 mb-3 font-medium">
+                          <p className="text-lg text-gray-800 dark:text-gray-100 mb-3 font-medium">
                             {q.question}
                           </p>
                             <button
@@ -630,7 +630,7 @@ Return JSON: { situation: string, task: string, action: string, result: string }
                                   ></path>
                                 </svg>
                               </summary>
-                              <div className="mt-3 text-gray-600 text-sm leading-relaxed bg-blue-50/50 p-4 rounded-xl border border-blue-100 animate-in fade-in slide-in-from-top-2 duration-200">
+                              <div className="mt-3 text-gray-600 dark:text-gray-300 text-sm leading-relaxed bg-blue-50/50 dark:bg-gray-800 p-4 rounded-xl border border-blue-100 dark:border-gray-700 animate-in fade-in slide-in-from-top-2 duration-200">
                                 {q.answer}
                               </div>
                             </details>
@@ -702,13 +702,13 @@ Return JSON: { situation: string, task: string, action: string, result: string }
                     );
                     })}
                   </div>
-                  <details className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-                  <summary className="cursor-pointer text-lg font-semibold text-gray-800">
+                  <details className="bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-800">
+                  <summary className="cursor-pointer text-lg font-semibold text-gray-800 dark:text-gray-100">
                     Saved Questions
                   </summary>
                   <div className="mt-4 space-y-4">
                     {savedQuestions.length === 0 ? (
-                      <p className="text-gray-600">
+                      <p className="text-gray-600 dark:text-gray-300">
                         Bookmark questions above to build your practice list
                       </p>
                     ) : (

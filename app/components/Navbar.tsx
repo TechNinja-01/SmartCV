@@ -32,7 +32,7 @@ const Navbar = () => {
   };
 
   return (
-    <nav className='navbar'>
+    <nav className='navbar dark:text-gray-100'>
       <Link to="/">
         <p className='text-2xl font-bold text-gradient'>SmartCV</p>
       </Link>
@@ -44,7 +44,7 @@ const Navbar = () => {
           className={`px-6 py-2 rounded-full font-medium transition-all ${
             currentPath === '/upload'
               ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white'
-              : 'text-gray-600 hover:text-gray-800'
+              : 'text-gray-600 hover:text-gray-800 dark:text-gray-200 dark:hover:text-white'
           }`}
         >
           ATS Review
@@ -54,7 +54,7 @@ const Navbar = () => {
           className={`px-6 py-2 rounded-full font-medium transition-all ${
             currentPath === '/interview'
               ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white'
-              : 'text-gray-600 hover:text-gray-800'
+              : 'text-gray-600 hover:text-gray-800 dark:text-gray-200 dark:hover:text-white'
           }`}
         >
           Interview Prep
@@ -64,7 +64,7 @@ const Navbar = () => {
           className={`px-6 py-2 rounded-full font-medium transition-all ${
             currentPath === '/cover-letter'
               ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white'
-              : 'text-gray-600 hover:text-gray-800'
+              : 'text-gray-600 hover:text-gray-800 dark:text-gray-200 dark:hover:text-white'
           }`}
         >
           Cover Letter
@@ -74,7 +74,7 @@ const Navbar = () => {
           className={`px-6 py-2 rounded-full font-medium transition-all ${
             currentPath === '/jobs'
               ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white'
-              : 'text-gray-600 hover:text-gray-800'
+              : 'text-gray-600 hover:text-gray-800 dark:text-gray-200 dark:hover:text-white'
           }`}
         >
           Job Search
@@ -92,7 +92,7 @@ const Navbar = () => {
         <button
           type="button"
           onClick={toggleTheme}
-          className="px-4 py-2 rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
+          className="px-4 py-2 rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700 transition-colors"
         >
           {isDarkMode ? '☀️' : '🌙'}
         </button>
@@ -100,7 +100,7 @@ const Navbar = () => {
 
       <div className='md:hidden'>
         <select
-          className='px-4 py-2 rounded-full border border-gray-200 bg-white font-medium'
+          className='px-4 py-2 rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 font-medium text-gray-800 dark:text-gray-100'
           value={currentPath}
           onChange={(e) => navigate(e.target.value)}
         >
@@ -123,7 +123,7 @@ const Navbar = () => {
         <button
           type="button"
           onClick={toggleTheme}
-          className="mt-3 px-4 py-2 rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
+          className="mt-3 px-4 py-2 rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700 transition-colors"
         >
           {isDarkMode ? '☀️' : '🌙'}
         </button>

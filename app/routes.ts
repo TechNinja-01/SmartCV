@@ -9,5 +9,6 @@ export default [
     route('/cover-letter','routes/cover-letter.tsx'),
     route('/resume/:id','routes/resume.tsx'),
     route('/wipe','routes/wipe.tsx'),
-    route('/api/generate-questions', 'routes/api.generate-questions.ts')
+    route('/api/generate-questions', 'routes/api.generate-questions.ts'),
+    route('/api/generate-cover-letter', 'routes/api.generate-cover-letter.ts')
 ] satisfies RouteConfig;

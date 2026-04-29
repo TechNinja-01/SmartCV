@@ -230,7 +230,7 @@ const Resume = () => {
                         <div className="flex flex-col gap-8 animate-in fade-in duration-1000">
                             <Summary feedback={feedback} />
                             <ScoreBreakdown items={scoreBreakdownItems} />
-                            <details className="bg-white rounded-2xl shadow-md p-6">
+                            <details className="bg-white dark:bg-gray-900 rounded-2xl shadow-md p-6 border border-gray-100 dark:border-gray-800">
                                 <summary className="cursor-pointer text-xl font-semibold text-gray-800">
                                     Keyword Gap Analysis
                                 </summary>

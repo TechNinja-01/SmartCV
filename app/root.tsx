@@ -31,6 +31,19 @@ export function Layout({ children }: { children: React.ReactNode }) {
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <script
+          // Apply theme before first paint (prevents flash).
+          dangerouslySetInnerHTML={{
+            __html: `
+(() => {
+  try {
+    const theme = localStorage.getItem('smartcv_theme') || 'light';
+    if (theme === 'dark') document.documentElement.classList.add('dark');
+    else document.documentElement.classList.remove('dark');
+  } catch {}
+})();`,
+          }}
+        />
         <Meta />
         <Links />
       </head>

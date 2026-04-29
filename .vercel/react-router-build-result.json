@@ -1,0 +1,214 @@
+{
+  "buildManifest": {
+    "serverBundles": {
+      "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0": {
+        "id": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+        "file": "build/server/nodejs_eyJydW50aW1lIjoibm9kZWpzIn0/index.js",
+        "config": {
+          "runtime": "nodejs"
+        }
+      }
+    },
+    "routeIdToServerBundleId": {
+      "routes/home": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/auth": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/upload": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/interview": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/jobs": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/cover-letter": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/resume": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/wipe": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/api.generate-questions": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/api.generate-cover-letter": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0"
+    },
+    "routes": {
+      "root": {
+        "path": "",
+        "id": "root",
+        "file": "app/root.tsx",
+        "config": {}
+      },
+      "routes/home": {
+        "id": "routes/home",
+        "parentId": "root",
+        "file": "app/routes/home.tsx",
+        "index": true,
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/auth": {
+        "id": "routes/auth",
+        "parentId": "root",
+        "file": "app/routes/auth.tsx",
+        "path": "/auth",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/upload": {
+        "id": "routes/upload",
+        "parentId": "root",
+        "file": "app/routes/upload.tsx",
+        "path": "/upload",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/interview": {
+        "id": "routes/interview",
+        "parentId": "root",
+        "file": "app/routes/interview.tsx",
+        "path": "/interview",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/jobs": {
+        "id": "routes/jobs",
+        "parentId": "root",
+        "file": "app/routes/jobs.tsx",
+        "path": "/jobs",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/cover-letter": {
+        "id": "routes/cover-letter",
+        "parentId": "root",
+        "file": "app/routes/cover-letter.tsx",
+        "path": "/cover-letter",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/resume": {
+        "id": "routes/resume",
+        "parentId": "root",
+        "file": "app/routes/resume.tsx",
+        "path": "/resume/:id",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/wipe": {
+        "id": "routes/wipe",
+        "parentId": "root",
+        "file": "app/routes/wipe.tsx",
+        "path": "/wipe",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/api.generate-questions": {
+        "id": "routes/api.generate-questions",
+        "parentId": "root",
+        "file": "app/routes/api.generate-questions.ts",
+        "path": "/api/generate-questions",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/api.generate-cover-letter": {
+        "id": "routes/api.generate-cover-letter",
+        "parentId": "root",
+        "file": "app/routes/api.generate-cover-letter.ts",
+        "path": "/api/generate-cover-letter",
+        "config": {
+          "runtime": "nodejs"
+        }
+      }
+    }
+  },
+  "reactRouterConfig": {
+    "appDirectory": "C:/Users/Hp/Downloads/Smart-CV/SmartCV-2/app",
+    "basename": "/",
+    "buildDirectory": "C:/Users/Hp/Downloads/Smart-CV/SmartCV-2/build",
+    "future": {
+      "unstable_middleware": false,
+      "unstable_optimizeDeps": false,
+      "unstable_splitRouteModules": false,
+      "unstable_subResourceIntegrity": false,
+      "unstable_viteEnvironmentApi": false
+    },
+    "routes": {
+      "root": {
+        "path": "",
+        "id": "root",
+        "file": "root.tsx"
+      },
+      "routes/home": {
+        "id": "routes/home",
+        "parentId": "root",
+        "file": "routes/home.tsx",
+        "index": true
+      },
+      "routes/auth": {
+        "id": "routes/auth",
+        "parentId": "root",
+        "file": "routes/auth.tsx",
+        "path": "/auth"
+      },
+      "routes/upload": {
+        "id": "routes/upload",
+        "parentId": "root",
+        "file": "routes/upload.tsx",
+        "path": "/upload"
+      },
+      "routes/interview": {
+        "id": "routes/interview",
+        "parentId": "root",
+        "file": "routes/interview.tsx",
+        "path": "/interview"
+      },
+      "routes/jobs": {
+        "id": "routes/jobs",
+        "parentId": "root",
+        "file": "routes/jobs.tsx",
+        "path": "/jobs"
+      },
+      "routes/cover-letter": {
+        "id": "routes/cover-letter",
+        "parentId": "root",
+        "file": "routes/cover-letter.tsx",
+        "path": "/cover-letter"
+      },
+      "routes/resume": {
+        "id": "routes/resume",
+        "parentId": "root",
+        "file": "routes/resume.tsx",
+        "path": "/resume/:id"
+      },
+      "routes/wipe": {
+        "id": "routes/wipe",
+        "parentId": "root",
+        "file": "routes/wipe.tsx",
+        "path": "/wipe"
+      },
+      "routes/api.generate-questions": {
+        "id": "routes/api.generate-questions",
+        "parentId": "root",
+        "file": "routes/api.generate-questions.ts",
+        "path": "/api/generate-questions"
+      },
+      "routes/api.generate-cover-letter": {
+        "id": "routes/api.generate-cover-letter",
+        "parentId": "root",
+        "file": "routes/api.generate-cover-letter.ts",
+        "path": "/api/generate-cover-letter"
+      }
+    },
+    "routeDiscovery": {
+      "mode": "lazy",
+      "manifestPath": "/__manifest"
+    },
+    "serverBuildFile": "index.js",
+    "serverModuleFormat": "esm",
+    "ssr": true
+  },
+  "viteConfig": {
+    "build": {
+      "assetsDir": "assets"
+    }
+  }
+}

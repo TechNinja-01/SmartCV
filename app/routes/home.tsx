@@ -3,7 +3,7 @@ import Navbar from "~/components/Navbar";
 import ResumeCard from "~/components/ResumeCard";
 import {usePuterStore} from "~/lib/puter";
 import {Link, useNavigate} from "react-router";
-import {useEffect, useState} from "react";
+import {useEffect, useMemo, useRef, useState} from "react";
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -22,6 +22,7 @@ export default function Home() {
   const [trackedJobsCount, setTrackedJobsCount] = useState(0);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [onboardingStep, setOnboardingStep] = useState(1);
+  const onboardingDialogRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if(!auth.isAuthenticated) navigate('/auth?next=/');
@@ -48,7 +49,7 @@ export default function Home() {
       setSavedQuestionsCount(Array.isArray(savedQuestions) ? savedQuestions.length : 0);
       setTrackedJobsCount(Array.isArray(trackedJobs) ? trackedJobs.length : 0);
 
-      const onboardingDone = await kv.get(ONBOARDING_KEY);
+      const onboardingDone = await kv.get(ONBOARDED_KEY);
       if ((!parsedResumes || parsedResumes.length === 0) && onboardingDone !== 'true') {
         setShowOnboarding(true);
         setOnboardingStep(1);
@@ -94,7 +95,62 @@ export default function Home() {
       : null;
   
 
-  return <main className="bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 min-h-screen">
+  const isBrandNewUser =
+    resumes.length === 0 && trackedJobsCount === 0 && savedQuestionsCount === 0;
+
+  const dismissOnboarding = async () => {
+    await kv.set(ONBOARDED_KEY, 'true');
+    setShowOnboarding(false);
+  };
+
+  useEffect(() => {
+    if (!showOnboarding) return;
+
+    const dialog = onboardingDialogRef.current;
+    if (!dialog) return;
+
+    const getFocusable = () =>
+      Array.from(
+        dialog.querySelectorAll<HTMLElement>(
+          'a[href],button:not([disabled]),textarea,input,select,[tabindex]:not([tabindex="-1"])'
+        )
+      );
+
+    const focusables = getFocusable();
+    focusables[0]?.focus();
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        void dismissOnboarding();
+        return;
+      }
+
+      if (e.key !== 'Tab') return;
+      const items = getFocusable();
+      if (items.length === 0) return;
+      const first = items[0];
+      const last = items[items.length - 1];
+      const active = document.activeElement as HTMLElement | null;
+
+      if (e.shiftKey) {
+        if (!active || active === first) {
+          e.preventDefault();
+          last.focus();
+        }
+      } else {
+        if (active === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [showOnboarding, kv]);
+
+  return <main className="bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 min-h-screen">
     <Navbar />
     
 
@@ -104,74 +160,87 @@ export default function Home() {
         <h2>Everything you need to land your dream job in one place</h2>
       </div>
 
+      {isBrandNewUser ? (
+        <div className="w-full max-w-6xl mb-12">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 border border-gray-100 dark:border-gray-800 shadow-sm">
+            <h3 className="text-2xl font-semibold text-gray-800 dark:text-gray-100 mb-2">
+              Welcome to SmartCV — start by uploading your resume
+            </h3>
+            <p className="text-gray-600 dark:text-gray-300">
+              Once you analyze a resume, you’ll see your ATS score trend, matching job badges, and saved interview practice.
+            </p>
+          </div>
+        </div>
+      ) : (
+        <div className="w-full max-w-6xl grid grid-cols-1 md:grid-cols-2 gap-4 mb-10">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl p-5 border border-gray-100 dark:border-gray-800">
+            <p className="text-sm text-gray-500 dark:text-gray-400">Resumes Analyzed</p>
+            <p className="text-3xl font-bold text-gray-800 dark:text-gray-100">{resumes.length}</p>
+          </div>
+          <div className="bg-white dark:bg-gray-900 rounded-2xl p-5 border border-gray-100 dark:border-gray-800">
+            <p className="text-sm text-gray-500 dark:text-gray-400">Latest ATS Score</p>
+            <div className="flex items-center gap-2">
+              <p className="text-3xl font-bold text-gray-800 dark:text-gray-100">
+                {typeof latestAtsScore === 'number' ? latestAtsScore : 'N/A'}
+              </p>
+              {trendDirection !== null && (
+                <span
+                  className={`text-sm font-semibold ${
+                    trendDirection >= 0 ? 'text-emerald-600' : 'text-rose-600'
+                  }`}
+                >
+                  {trendDirection >= 0 ? '↑' : '↓'} {Math.abs(trendDirection)}
+                </span>
+              )}
+            </div>
+          </div>
+          <div className="bg-white dark:bg-gray-900 rounded-2xl p-5 border border-gray-100 dark:border-gray-800">
+            <p className="text-sm text-gray-500 dark:text-gray-400">Jobs Tracked</p>
+            <p className="text-3xl font-bold text-gray-800 dark:text-gray-100">{trackedJobsCount}</p>
+          </div>
+          <div className="bg-white dark:bg-gray-900 rounded-2xl p-5 border border-gray-100 dark:border-gray-800">
+            <p className="text-sm text-gray-500 dark:text-gray-400">Questions Saved</p>
+            <p className="text-3xl font-bold text-gray-800 dark:text-gray-100">{savedQuestionsCount}</p>
+          </div>
+        </div>
+      )}
+
       <div className="w-full max-w-6xl grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
         <Link to="/upload" className="group">
-          <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100 hover:shadow-xl transition-all hover:scale-105">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl p-8 shadow-sm border border-gray-100 dark:border-gray-800 hover:shadow-xl transition-all hover:scale-105">
             <div className="w-16 h-16 bg-gradient-to-br from-blue-400 to-blue-600 rounded-2xl flex items-center justify-center mb-4">
               <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
             </div>
-            <h3 className="text-2xl font-semibold text-gray-800 mb-2">ATS Review</h3>
-            <p className="text-gray-600">Get AI-powered feedback on your resume and improve your ATS score</p>
+            <h3 className="text-2xl font-semibold text-gray-800 dark:text-gray-100 mb-2">Analyze Resume</h3>
+            <p className="text-gray-600 dark:text-gray-300">Get AI-powered feedback and improve your ATS score</p>
           </div>
         </Link>
 
         <Link to="/interview" className="group">
-          <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100 hover:shadow-xl transition-all hover:scale-105">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl p-8 shadow-sm border border-gray-100 dark:border-gray-800 hover:shadow-xl transition-all hover:scale-105">
             <div className="w-16 h-16 bg-gradient-to-br from-purple-400 to-purple-600 rounded-2xl flex items-center justify-center mb-4">
               <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
-            <h3 className="text-2xl font-semibold text-gray-800 mb-2">Interview Prep</h3>
-            <p className="text-gray-600">Generate custom interview questions tailored to your target role</p>
+            <h3 className="text-2xl font-semibold text-gray-800 dark:text-gray-100 mb-2">Practice Interview</h3>
+            <p className="text-gray-600 dark:text-gray-300">Generate questions and get AI evaluation in mock mode</p>
           </div>
         </Link>
 
         <Link to="/jobs" className="group">
-          <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100 hover:shadow-xl transition-all hover:scale-105">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl p-8 shadow-sm border border-gray-100 dark:border-gray-800 hover:shadow-xl transition-all hover:scale-105">
             <div className="w-16 h-16 bg-gradient-to-br from-green-400 to-teal-600 rounded-2xl flex items-center justify-center mb-4">
               <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
               </svg>
             </div>
-            <h3 className="text-2xl font-semibold text-gray-800 mb-2">Job Search</h3>
-            <p className="text-gray-600">Discover job opportunities that match your skills and experience</p>
+            <h3 className="text-2xl font-semibold text-gray-800 dark:text-gray-100 mb-2">Search Jobs</h3>
+            <p className="text-gray-600 dark:text-gray-300">Find roles and track applications in your kanban board</p>
           </div>
         </Link>
-      </div>
-
-      <div className="w-full max-w-6xl grid grid-cols-1 md:grid-cols-4 gap-4 mb-10">
-        <div className="bg-white rounded-2xl p-5 border border-gray-100">
-          <p className="text-sm text-gray-500">Resumes Analyzed</p>
-          <p className="text-3xl font-bold text-gray-800">{resumes.length}</p>
-        </div>
-        <div className="bg-white rounded-2xl p-5 border border-gray-100">
-          <p className="text-sm text-gray-500">Latest ATS Score</p>
-          <div className="flex items-center gap-2">
-            <p className="text-3xl font-bold text-gray-800">
-              {typeof latestAtsScore === 'number' ? latestAtsScore : 'N/A'}
-            </p>
-            {trendDirection !== null && (
-              <span
-                className={`text-sm font-semibold ${
-                  trendDirection >= 0 ? 'text-emerald-600' : 'text-rose-600'
-                }`}
-              >
-                {trendDirection >= 0 ? '↑' : '↓'} {Math.abs(trendDirection)}
-              </span>
-            )}
-          </div>
-        </div>
-        <div className="bg-white rounded-2xl p-5 border border-gray-100">
-          <p className="text-sm text-gray-500">Jobs Saved</p>
-          <p className="text-3xl font-bold text-gray-800">{trackedJobsCount}</p>
-        </div>
-        <div className="bg-white rounded-2xl p-5 border border-gray-100">
-          <p className="text-sm text-gray-500">Saved Questions</p>
-          <p className="text-3xl font-bold text-gray-800">{savedQuestionsCount}</p>
-        </div>
       </div>
 
       <div className="w-full max-w-6xl">
@@ -287,72 +356,136 @@ export default function Home() {
     </section>
     {showOnboarding && (
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div className="absolute inset-0 bg-black/40" />
-        <div className="relative w-full max-w-xl rounded-2xl bg-white p-6 shadow-xl">
+        <button
+          type="button"
+          aria-label="Close onboarding"
+          className="absolute inset-0 bg-black/40"
+          onClick={() => void dismissOnboarding()}
+        />
+        <div
+          ref={onboardingDialogRef}
+          role="dialog"
+          aria-modal="true"
+          className="relative w-full max-w-xl rounded-2xl bg-white dark:bg-gray-900 p-6 shadow-xl border border-gray-100 dark:border-gray-800"
+        >
           {onboardingStep === 1 && (
             <div className="space-y-4">
-              <h3 className="text-2xl font-semibold text-gray-800">Welcome to SmartCV</h3>
-              <p className="text-gray-600">
-                You can analyze your resume, practice interview questions, and track job applications in one place.
-              </p>
-            </div>
-          )}
-          {onboardingStep === 2 && (
-            <div className="space-y-4">
-              <h3 className="text-2xl font-semibold text-gray-800">Start by uploading your resume</h3>
-              <p className="text-gray-600">Upload a resume to unlock ATS insights and personalized recommendations.</p>
-              <Link
-                to="/upload"
-                className="inline-block px-5 py-2 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 text-white font-medium"
-              >
-                Go to ATS Upload
-              </Link>
-            </div>
-          )}
-          {onboardingStep === 3 && (
-            <div className="space-y-4">
-              <h3 className="text-2xl font-semibold text-gray-800">You're all set!</h3>
-              <div className="flex flex-wrap gap-2">
-                <Link to="/upload" className="px-4 py-2 rounded-full bg-gray-100 text-gray-700">Analyze Resume</Link>
-                <Link to="/interview" className="px-4 py-2 rounded-full bg-gray-100 text-gray-700">Practice Interview</Link>
-                <Link to="/jobs" className="px-4 py-2 rounded-full bg-gray-100 text-gray-700">Search Jobs</Link>
+              <h3 className="text-2xl font-semibold text-gray-800 dark:text-gray-100">
+                Welcome to SmartCV 👋
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+                <div className="rounded-xl border border-gray-200 dark:border-gray-700 p-3">
+                  <p className="font-semibold text-gray-800 dark:text-gray-100">📄 ATS Review</p>
+                  <p className="text-gray-600 dark:text-gray-300">Upload your resume for an ATS score & tips</p>
+                </div>
+                <div className="rounded-xl border border-gray-200 dark:border-gray-700 p-3">
+                  <p className="font-semibold text-gray-800 dark:text-gray-100">🎤 Interview</p>
+                  <p className="text-gray-600 dark:text-gray-300">Generate questions and practice answers</p>
+                </div>
+                <div className="rounded-xl border border-gray-200 dark:border-gray-700 p-3">
+                  <p className="font-semibold text-gray-800 dark:text-gray-100">🧭 Job Tracker</p>
+                  <p className="text-gray-600 dark:text-gray-300">Save roles and track your application stages</p>
+                </div>
+              </div>
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  className="px-5 py-2 rounded-full bg-blue-600 text-white font-medium"
+                  onClick={() => setOnboardingStep(2)}
+                >
+                  Next →
+                </button>
               </div>
             </div>
           )}
-          <div className="mt-6 flex items-center justify-between">
-            <button
-              type="button"
-              className="px-4 py-2 rounded-full bg-gray-100 text-gray-700 disabled:opacity-50"
-              disabled={onboardingStep === 1}
-              onClick={() => setOnboardingStep((step) => Math.max(1, step - 1))}
-            >
-              Back
-            </button>
-            {onboardingStep < 3 ? (
+
+          {onboardingStep === 2 && (
+            <div className="space-y-4">
+              <h3 className="text-2xl font-semibold text-gray-800 dark:text-gray-100">
+                Start with your Resume
+              </h3>
+              <p className="text-gray-600 dark:text-gray-300">
+                Upload your resume to get an ATS score and keyword analysis.
+              </p>
+              <div className="flex items-center justify-between gap-3">
+                <button
+                  type="button"
+                  className="text-sm underline text-gray-600 dark:text-gray-300"
+                  onClick={() => void dismissOnboarding()}
+                >
+                  Skip for now
+                </button>
+                <button
+                  type="button"
+                  className="px-5 py-2 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 text-white font-medium"
+                  onClick={async () => {
+                    await kv.set(ONBOARDED_KEY, 'true');
+                    setShowOnboarding(false);
+                    navigate('/upload');
+                  }}
+                >
+                  Go to ATS Review
+                </button>
+              </div>
+            </div>
+          )}
+
+          {onboardingStep === 3 && (
+            <div className="space-y-4">
+              <h3 className="text-2xl font-semibold text-gray-800 dark:text-gray-100">
+                You're all set!
+              </h3>
+              <p className="text-gray-600 dark:text-gray-300">
+                Quick links to jump back in anytime:
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Link to="/upload" className="px-4 py-2 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-100">
+                  Analyze Resume
+                </Link>
+                <Link to="/interview" className="px-4 py-2 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-100">
+                  Practice Interview
+                </Link>
+                <Link to="/jobs" className="px-4 py-2 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-100">
+                  Search Jobs
+                </Link>
+              </div>
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  className="px-5 py-2 rounded-full bg-blue-600 text-white font-medium"
+                  onClick={() => void dismissOnboarding()}
+                >
+                  Let's go!
+                </button>
+              </div>
+            </div>
+          )}
+
+          {onboardingStep !== 3 && (
+            <div className="mt-6 flex items-center justify-between">
               <button
                 type="button"
-                className="px-4 py-2 rounded-full bg-blue-600 text-white"
-                onClick={() => setOnboardingStep((step) => Math.min(3, step + 1))}
+                className="px-4 py-2 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-100 disabled:opacity-50"
+                disabled={onboardingStep === 1}
+                onClick={() => setOnboardingStep((step) => Math.max(1, step - 1))}
               >
-                Next
+                Back
               </button>
-            ) : (
-              <button
-                type="button"
-                className="px-4 py-2 rounded-full bg-blue-600 text-white"
-                onClick={async () => {
-                  await kv.set(ONBOARDING_KEY, 'true');
-                  setShowOnboarding(false);
-                }}
-              >
-                Finish
-              </button>
-            )}
-          </div>
+              {onboardingStep === 2 && (
+                <button
+                  type="button"
+                  className="px-4 py-2 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-100"
+                  onClick={() => setOnboardingStep(3)}
+                >
+                  Next →
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </div>
     )}
   </main>
 }
 
-const ONBOARDING_KEY = 'smartcv_onboarding_complete';
+const ONBOARDED_KEY = 'smartcv_onboarded';

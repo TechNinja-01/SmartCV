@@ -1,4 +1,4 @@
-import { useState, type FormEvent, useEffect } from 'react';
+import { useRef, useState, type FormEvent, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import ErrorState from '~/components/ErrorState';
 import LoadingState from '~/components/LoadingState';
@@ -40,6 +40,27 @@ interface JobSearchPayload {
   location: string;
 }
 
+type TrackerColumn = 'Saved' | 'Applied' | 'Interview' | 'Offer' | 'Rejected';
+
+type TrackedJobItem = {
+  jobId: string;
+  title: string;
+  company: string;
+  location: string;
+  url: string;
+  column: TrackerColumn;
+  note: string;
+  savedAt: string;
+};
+
+const TRACKER_COLUMNS: TrackerColumn[] = [
+  'Saved',
+  'Applied',
+  'Interview',
+  'Offer',
+  'Rejected',
+];
+
 const Jobs = () => {
   const { auth, isLoading, kv } = usePuterStore();
   const navigate = useNavigate();
@@ -48,9 +69,11 @@ const Jobs = () => {
   const [error, setError] = useState('');
   const [lastSearch, setLastSearch] = useState<JobSearchPayload | null>(null);
   const [activeView, setActiveView] = useState<'search' | 'tracker'>('search');
-  const [trackedJobs, setTrackedJobs] = useState<TrackedJob[]>([]);
-  const [draggedJobId, setDraggedJobId] = useState<string | null>(null);
+  const [trackedJobs, setTrackedJobs] = useState<TrackedJobItem[]>([]);
   const [resumeKeywords, setResumeKeywords] = useState<string[]>([]);
+  const noteSaveTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>(
+    {}
+  );
 
   useEffect(() => {
     if (!isLoading && !auth.isAuthenticated) {
@@ -67,8 +90,82 @@ const Jobs = () => {
           setTrackedJobs([]);
           return;
         }
-        const parsed = JSON.parse(stored) as TrackedJob[];
-        setTrackedJobs(Array.isArray(parsed) ? parsed : []);
+        const parsed = JSON.parse(stored) as unknown;
+        if (!Array.isArray(parsed)) {
+          setTrackedJobs([]);
+          return;
+        }
+
+        const migrated: TrackedJobItem[] = (parsed as unknown[]).flatMap(
+          (entry): TrackedJobItem[] => {
+            if (!entry || typeof entry !== 'object') return [];
+            const item = entry as Record<string, unknown>;
+
+            const jobId =
+              typeof item.jobId === 'string'
+                ? item.jobId
+                : typeof item.job_id === 'string'
+                  ? item.job_id
+                  : '';
+            if (!jobId) return [];
+
+            const title =
+              typeof item.title === 'string'
+                ? item.title
+                : typeof item.job_title === 'string'
+                  ? item.job_title
+                  : '';
+
+            const company =
+              typeof item.company === 'string'
+                ? item.company
+                : typeof item.employer_name === 'string'
+                  ? item.employer_name
+                  : '';
+
+            const location =
+              typeof item.location === 'string'
+                ? item.location
+                : formatJobLocation(item as unknown as Job);
+
+            const url =
+              typeof item.url === 'string'
+                ? item.url
+                : typeof item.job_apply_link === 'string'
+                  ? item.job_apply_link
+                  : '';
+
+            const rawColumn =
+              typeof item.column === 'string'
+                ? item.column
+                : typeof item.trackerStatus === 'string'
+                  ? item.trackerStatus
+                  : 'Saved';
+            const column: TrackerColumn = TRACKER_COLUMNS.includes(
+              rawColumn as TrackerColumn
+            )
+              ? (rawColumn as TrackerColumn)
+              : 'Saved';
+
+            const note = typeof item.note === 'string' ? item.note : '';
+            const savedAt = typeof item.savedAt === 'string' ? item.savedAt : new Date().toISOString();
+
+            return [
+              {
+                jobId,
+                title,
+                company,
+                location,
+                url,
+                column,
+                note,
+                savedAt,
+              },
+            ];
+          }
+        );
+
+        setTrackedJobs(migrated);
       } catch {
         setTrackedJobs([]);
       }
@@ -123,7 +220,7 @@ const Jobs = () => {
     }
   }, [auth.isAuthenticated, isLoading, kv]);
 
-  const persistTrackedJobs = async (items: TrackedJob[]) => {
+  const persistTrackedJobs = async (items: TrackedJobItem[]) => {
     // Puter KV key: smartcv_job_tracker (stores kanban jobs and per-job notes)
     await kv.set(JOB_TRACKER_KEY, JSON.stringify(items));
   };
@@ -204,20 +301,16 @@ const Jobs = () => {
     searchJobs(payload);
   };
 
-  const trackerColumns: TrackerStatus[] = [
-    'Saved',
-    'Applied',
-    'Interview',
-    'Offer',
-    'Rejected',
-  ];
-
   const saveJobToTracker = async (job: Job) => {
-    if (trackedJobs.some((item) => item.job_id === job.job_id)) return;
-    const nextItems: TrackedJob[] = [
+    if (trackedJobs.some((item) => item.jobId === job.job_id)) return;
+    const nextItems: TrackedJobItem[] = [
       {
-        ...job,
-        trackerStatus: 'Saved',
+        jobId: job.job_id,
+        title: job.job_title,
+        company: job.employer_name,
+        location: formatJobLocation(job),
+        url: job.job_apply_link,
+        column: 'Saved',
         note: '',
         savedAt: new Date().toISOString(),
       },
@@ -227,24 +320,35 @@ const Jobs = () => {
     await persistTrackedJobs(nextItems);
   };
 
-  const moveTrackedJob = async (jobId: string, status: TrackerStatus) => {
+  const moveTrackedJob = async (jobId: string, nextColumn: TrackerColumn) => {
     const nextItems = trackedJobs.map((item) =>
-      item.job_id === jobId ? { ...item, trackerStatus: status } : item
+      item.jobId === jobId ? { ...item, column: nextColumn } : item
     );
     setTrackedJobs(nextItems);
     await persistTrackedJobs(nextItems);
+  };
+
+  const scheduleTrackedJobNoteSave = (jobId: string, note: string) => {
+    const existing = noteSaveTimersRef.current[jobId];
+    if (existing) {
+      clearTimeout(existing);
+    }
+
+    noteSaveTimersRef.current[jobId] = setTimeout(() => {
+      void updateTrackedJobNote(jobId, note);
+    }, 500);
   };
 
   const updateTrackedJobNote = async (jobId: string, note: string) => {
     const nextItems = trackedJobs.map((item) =>
-      item.job_id === jobId ? { ...item, note } : item
+      item.jobId === jobId ? { ...item, note } : item
     );
     setTrackedJobs(nextItems);
     await persistTrackedJobs(nextItems);
   };
 
-  const getTrackedJobsByStatus = (status: TrackerStatus) =>
-    trackedJobs.filter((item) => item.trackerStatus === status);
+  const getTrackedJobsByColumn = (column: TrackerColumn) =>
+    trackedJobs.filter((item) => item.column === column);
 
   const getMatchScore = (job: Job): number | null => {
     if (resumeKeywords.length === 0) return null;
@@ -252,19 +356,31 @@ const Jobs = () => {
       .toLowerCase()
       .replace(/<[^>]*>/g, ' ')
       .replace(/[^a-z0-9\s]/g, ' ');
-    const words = new Set(jobText.split(/\s+/).filter(Boolean));
-    const matched = resumeKeywords.filter((keyword) => words.has(keyword)).length;
-    return Math.round((matched / resumeKeywords.length) * 100);
+    const jobKeywords = Array.from(
+      new Set(
+        jobText
+          .split(/\s+/)
+          .filter(Boolean)
+          .filter((word) => word.length > 2)
+          .filter((word) => !COMMON_STOP_WORDS.has(word))
+      )
+    );
+    const jobKeywordSet = new Set(jobKeywords);
+    const matched = resumeKeywords.filter((keyword) => jobKeywordSet.has(keyword)).length;
+    const totalJobKeywords = Math.max(1, jobKeywords.length);
+    const rawScore = (matched / totalJobKeywords) * 100;
+    const roundedTo5 = Math.round(rawScore / 5) * 5;
+    return Math.max(0, Math.min(100, roundedTo5));
   };
 
   const getMatchBadgeClass = (score: number) => {
-    if (score > 70) return 'bg-emerald-100 text-emerald-800';
+    if (score >= 70) return 'bg-emerald-100 text-emerald-800';
     if (score >= 40) return 'bg-amber-100 text-amber-800';
     return 'bg-rose-100 text-rose-800';
   };
 
   return (
-    <main className="bg-gradient-to-br from-green-50 via-teal-50 to-blue-50 min-h-screen">
+    <main className="bg-gradient-to-br from-green-50 via-teal-50 to-blue-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 min-h-screen">
       <Navbar />
 
       <section className="main-section">
@@ -302,7 +418,7 @@ const Jobs = () => {
           {activeView === 'search' && (
             <>
           <div className="gradient-border">
-            <div className="bg-white rounded-2xl p-8">
+            <div className="bg-white dark:bg-gray-900 rounded-2xl p-8">
               <form onSubmit={handleSubmit} className="flex flex-col gap-6">
                 <div className="form-div">
                   <label htmlFor="job-title">Job Title *</label>
@@ -364,7 +480,7 @@ const Jobs = () => {
                 {jobs.map((job) => (
                   <div
                     key={job.job_id}
-                    className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-all hover:scale-[1.01]"
+                    className="bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-800 hover:shadow-md transition-all hover:scale-[1.01]"
                   >
                     <div className="flex items-start gap-4">
                       {job.employer_logo && (
@@ -383,12 +499,12 @@ const Jobs = () => {
                           const matchScore = getMatchScore(job);
                           return (
                         <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
-                          <h4 className="text-xl font-semibold text-gray-800">
+                          <h4 className="text-xl font-semibold text-gray-800 dark:text-gray-100">
                             {job.job_title}
                           </h4>
                           {matchScore === null ? (
                             <span
-                              className="text-xs px-3 py-1 rounded-full bg-gray-100 text-gray-600"
+                              className="text-xs px-3 py-1 rounded-full bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300"
                               title="Upload resume for match score"
                             >
                               Upload resume for match score
@@ -405,7 +521,7 @@ const Jobs = () => {
                         })()}
 
                         <div className="flex flex-wrap gap-3 mb-3">
-                          <div className="flex items-center gap-2 text-gray-600">
+                          <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
                             <svg
                               className="w-5 h-5"
                               fill="none"
@@ -422,7 +538,7 @@ const Jobs = () => {
                             <span className="font-medium">{job.employer_name}</span>
                           </div>
 
-                          <div className="flex items-center gap-2 text-gray-600">
+                          <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
                             <svg
                               className="w-5 h-5"
                               fill="none"
@@ -452,13 +568,13 @@ const Jobs = () => {
                               {job.job_employment_type}
                             </span>
                           )}
-                          <span className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm">
+                          <span className="px-3 py-1 bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-200 rounded-full text-sm">
                             {formatRelativeDate(job.job_posted_at_datetime_utc)}
                           </span>
                         </div>
 
                         {job.job_description && (
-                          <p className="text-gray-600 text-sm mb-4 line-clamp-3">
+                          <p className="text-gray-600 dark:text-gray-300 text-sm mb-4 line-clamp-3">
                             {job.job_description.replace(/<[^>]*>/g, '').substring(0, 200)}
                             ...
                           </p>
@@ -489,17 +605,17 @@ const Jobs = () => {
                             </a>
                             <button
                               type="button"
-                              className="px-5 py-2 rounded-full bg-gray-100 text-gray-700 font-medium hover:bg-gray-200 transition-colors"
+                              className="px-5 py-2 rounded-full bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700 font-medium hover:bg-gray-200 transition-colors"
                               onClick={() => saveJobToTracker(job)}
-                              disabled={trackedJobs.some((item) => item.job_id === job.job_id)}
+                              disabled={trackedJobs.some((item) => item.jobId === job.job_id)}
                             >
-                              {trackedJobs.some((item) => item.job_id === job.job_id)
+                              {trackedJobs.some((item) => item.jobId === job.job_id)
                                 ? 'Saved to Tracker'
                                 : 'Save to Tracker'}
                             </button>
                           </div>
                         ) : (
-                          <p className="text-sm text-gray-500">Application link unavailable</p>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">Application link unavailable</p>
                         )}
                       </div>
                     </div>
@@ -514,44 +630,74 @@ const Jobs = () => {
           {activeView === 'tracker' && (
             <div className="mt-6 overflow-x-auto">
               <h3 className="text-2xl font-semibold text-gray-800 mb-4">My Job Tracker</h3>
+              {trackedJobs.length === 0 && (
+                <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-6 text-gray-600 dark:text-gray-300">
+                  Save jobs from the search results to start tracking
+                </div>
+              )}
               <div className="grid grid-cols-1 md:grid-cols-5 gap-4 min-w-[900px] md:min-w-0">
-                {trackerColumns.map((column) => (
+                {TRACKER_COLUMNS.map((column) => (
                   <div
                     key={column}
-                    className="bg-white rounded-2xl border border-gray-100 p-3 min-h-[260px]"
-                    onDragOver={(e) => e.preventDefault()}
-                    onDrop={() => {
-                      if (draggedJobId) {
-                        moveTrackedJob(draggedJobId, column);
-                        setDraggedJobId(null);
-                      }
-                    }}
+                    className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-3 min-h-[260px]"
                   >
-                    <h4 className="text-sm font-semibold text-gray-700 mb-3">{column}</h4>
+                    <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-3">{column}</h4>
                     <div className="space-y-3">
-                      {getTrackedJobsByStatus(column).map((trackedJob) => (
+                      {getTrackedJobsByColumn(column).map((trackedJob) => (
                         <div
-                          key={trackedJob.job_id}
-                          draggable
-                          onDragStart={() => setDraggedJobId(trackedJob.job_id)}
-                          className="rounded-xl border border-gray-200 p-3 bg-gray-50 cursor-grab active:cursor-grabbing"
+                          key={trackedJob.jobId}
+                          className="rounded-xl border border-gray-200 dark:border-gray-700 p-3 bg-gray-50 dark:bg-gray-800"
                         >
-                          <p className="text-sm font-semibold text-gray-800 line-clamp-2">
-                            {trackedJob.job_title}
+                          <p className="text-sm font-semibold text-gray-800 dark:text-gray-100 line-clamp-2">
+                            {trackedJob.title}
                           </p>
-                          <p className="text-xs text-gray-600 mt-1">{trackedJob.employer_name}</p>
+                          <p className="text-xs text-gray-600 dark:text-gray-300 mt-1">{trackedJob.company}</p>
+                          <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1 line-clamp-1">
+                            {trackedJob.location || 'Location not specified'}
+                          </p>
                           {trackedJob.note.trim() && (
-                            <p className="text-xs text-gray-500 mt-2 line-clamp-2">
-                              {trackedJob.note.substring(0, 60)}
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 line-clamp-2">
+                              {trackedJob.note.substring(0, 80)}
                             </p>
                           )}
+                          <div className="mt-3 flex items-center gap-2">
+                            <label
+                              htmlFor={`move-${trackedJob.jobId}`}
+                              className="text-[11px] font-medium text-gray-600"
+                            >
+                              Move to →
+                            </label>
+                            <select
+                              id={`move-${trackedJob.jobId}`}
+                              className="text-xs px-2 py-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100"
+                              defaultValue=""
+                              onChange={(e) => {
+                                const next = e.target.value as TrackerColumn;
+                                if (TRACKER_COLUMNS.includes(next) && next !== trackedJob.column) {
+                                  void moveTrackedJob(trackedJob.jobId, next);
+                                }
+                                e.currentTarget.value = '';
+                              }}
+                            >
+                              <option value="" disabled>
+                                Select…
+                              </option>
+                              {TRACKER_COLUMNS.filter((opt) => opt !== trackedJob.column).map(
+                                (opt) => (
+                                  <option key={opt} value={opt}>
+                                    {opt}
+                                  </option>
+                                )
+                              )}
+                            </select>
+                          </div>
                           <textarea
                             rows={2}
                             defaultValue={trackedJob.note}
-                            placeholder="Add note..."
-                            className="mt-2 w-full text-xs p-2 rounded-lg border border-gray-200 focus:outline-none bg-white"
+                            placeholder="Add interview notes, contacts, deadlines..."
+                            className="mt-2 w-full text-xs p-2 rounded-lg border border-gray-200 dark:border-gray-700 focus:outline-none bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100"
                             onBlur={(e) =>
-                              updateTrackedJobNote(trackedJob.job_id, e.target.value)
+                              scheduleTrackedJobNoteSave(trackedJob.jobId, e.target.value)
                             }
                           />
                         </div>
@@ -567,14 +713,6 @@ const Jobs = () => {
     </main>
   );
 };
-
-type TrackerStatus = 'Saved' | 'Applied' | 'Interview' | 'Offer' | 'Rejected';
-
-interface TrackedJob extends Job {
-  trackerStatus: TrackerStatus;
-  note: string;
-  savedAt: string;
-}
 
 const JOB_TRACKER_KEY = 'smartcv_job_tracker';
 const COMMON_STOP_WORDS = new Set([
