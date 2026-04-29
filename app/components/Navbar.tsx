@@ -1,15 +1,34 @@
-import React from 'react'
-import { Link, useLocation } from 'react-router'
+import React, { useEffect, useState } from 'react'
+import { Link, useLocation, useNavigate } from 'react-router'
 import { usePuterStore } from '~/lib/puter';
 
 const Navbar = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const currentPath = location.pathname;
   const { auth } = usePuterStore();
+  const [isDarkMode, setIsDarkMode] = useState(false);
   
   const handleLogout = () => {
     // This is correct: it calls the sign-out function from your store.
     auth.signOut(); 
+  };
+
+  useEffect(() => {
+    const saved = localStorage.getItem('smartcv_theme');
+    setIsDarkMode(saved === 'dark');
+  }, []);
+
+  const toggleTheme = () => {
+    const next = !isDarkMode;
+    setIsDarkMode(next);
+    if (next) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('smartcv_theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('smartcv_theme', 'light');
+    }
   };
 
   return (
@@ -41,6 +60,16 @@ const Navbar = () => {
           Interview Prep
         </Link>
         <Link
+          to="/cover-letter"
+          className={`px-6 py-2 rounded-full font-medium transition-all ${
+            currentPath === '/cover-letter'
+              ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white'
+              : 'text-gray-600 hover:text-gray-800'
+          }`}
+        >
+          Cover Letter
+        </Link>
+        <Link
           to="/jobs"
           className={`px-6 py-2 rounded-full font-medium transition-all ${
             currentPath === '/jobs'
@@ -60,17 +89,25 @@ const Navbar = () => {
             Log Out
           </button>
         )}
+        <button
+          type="button"
+          onClick={toggleTheme}
+          className="px-4 py-2 rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
+        >
+          {isDarkMode ? '☀️' : '🌙'}
+        </button>
       </div>
 
       <div className='md:hidden'>
         <select
           className='px-4 py-2 rounded-full border border-gray-200 bg-white font-medium'
           value={currentPath}
-          onChange={(e) => window.location.href = e.target.value}
+          onChange={(e) => navigate(e.target.value)}
         >
           <option value="/">Dashboard</option>
           <option value="/upload">ATS Review</option>
           <option value="/interview">Interview Prep</option>
+          <option value="/cover-letter">Cover Letter</option>
           <option value="/jobs">Job Search</option>
         </select>
         
@@ -83,6 +120,13 @@ const Navbar = () => {
             Log Out
           </button>
         )}
+        <button
+          type="button"
+          onClick={toggleTheme}
+          className="mt-3 px-4 py-2 rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
+        >
+          {isDarkMode ? '☀️' : '🌙'}
+        </button>
       </div>
     </nav>
   )

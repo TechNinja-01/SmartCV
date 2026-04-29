@@ -17,6 +17,11 @@ export default function Home() {
   const navigate = useNavigate();
   const [resumes, setResumes] = useState<Resume[]>([]);
   const [loadingResumes, setLoadingResumes] = useState(false);
+  const [compareTargetId, setCompareTargetId] = useState<string | null>(null);
+  const [savedQuestionsCount, setSavedQuestionsCount] = useState(0);
+  const [trackedJobsCount, setTrackedJobsCount] = useState(0);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [onboardingStep, setOnboardingStep] = useState(1);
 
   useEffect(() => {
     if(!auth.isAuthenticated) navigate('/auth?next=/');
@@ -33,12 +38,60 @@ export default function Home() {
       ))
 
       setResumes(parsedResumes || []);
+
+      const savedQuestionsRaw = await kv.get('smartcv_saved_questions');
+      const trackedJobsRaw = await kv.get('smartcv_job_tracker');
+      const savedQuestions = savedQuestionsRaw
+        ? (JSON.parse(savedQuestionsRaw) as unknown[])
+        : [];
+      const trackedJobs = trackedJobsRaw ? (JSON.parse(trackedJobsRaw) as unknown[]) : [];
+      setSavedQuestionsCount(Array.isArray(savedQuestions) ? savedQuestions.length : 0);
+      setTrackedJobsCount(Array.isArray(trackedJobs) ? trackedJobs.length : 0);
+
+      const onboardingDone = await kv.get(ONBOARDING_KEY);
+      if ((!parsedResumes || parsedResumes.length === 0) && onboardingDone !== 'true') {
+        setShowOnboarding(true);
+        setOnboardingStep(1);
+      }
       setLoadingResumes(false);
     }
 
     loadResumes()
   }, []);
 
+  const sortedResumes = [...resumes].sort((a, b) => {
+    const aTime = a.analyzedAt ? new Date(a.analyzedAt).getTime() : 0;
+    const bTime = b.analyzedAt ? new Date(b.analyzedAt).getTime() : 0;
+    return bTime - aTime;
+  });
+  const latestResume = sortedResumes[0] ?? null;
+  const previousResume = sortedResumes[1] ?? null;
+  const canCompare = sortedResumes.length > 1;
+  const compareTarget =
+    compareTargetId && latestResume
+      ? sortedResumes.find((resume) => resume.id === compareTargetId) ?? null
+      : null;
+
+  const formatAnalysisDate = (date?: string) => {
+    if (!date) return 'Unknown date';
+    const timestamp = new Date(date).getTime();
+    if (Number.isNaN(timestamp)) return 'Unknown date';
+    return new Date(date).toLocaleString();
+  };
+
+  const ScoreRow = ({ label, leftScore, rightScore }: { label: string; leftScore?: number; rightScore?: number }) => (
+    <div className="grid grid-cols-3 gap-3 text-sm">
+      <span className="text-gray-600">{label}</span>
+      <span className="font-medium text-gray-800">{typeof leftScore === 'number' ? `${leftScore}/100` : 'N/A'}</span>
+      <span className="font-medium text-gray-800">{typeof rightScore === 'number' ? `${rightScore}/100` : 'N/A'}</span>
+    </div>
+  );
+  const latestAtsScore = latestResume?.feedback?.ATS?.score;
+  const previousAtsScore = previousResume?.feedback?.ATS?.score;
+  const trendDirection =
+    typeof latestAtsScore === 'number' && typeof previousAtsScore === 'number'
+      ? latestAtsScore - previousAtsScore
+      : null;
   
 
   return <main className="bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 min-h-screen">
@@ -89,6 +142,38 @@ export default function Home() {
         </Link>
       </div>
 
+      <div className="w-full max-w-6xl grid grid-cols-1 md:grid-cols-4 gap-4 mb-10">
+        <div className="bg-white rounded-2xl p-5 border border-gray-100">
+          <p className="text-sm text-gray-500">Resumes Analyzed</p>
+          <p className="text-3xl font-bold text-gray-800">{resumes.length}</p>
+        </div>
+        <div className="bg-white rounded-2xl p-5 border border-gray-100">
+          <p className="text-sm text-gray-500">Latest ATS Score</p>
+          <div className="flex items-center gap-2">
+            <p className="text-3xl font-bold text-gray-800">
+              {typeof latestAtsScore === 'number' ? latestAtsScore : 'N/A'}
+            </p>
+            {trendDirection !== null && (
+              <span
+                className={`text-sm font-semibold ${
+                  trendDirection >= 0 ? 'text-emerald-600' : 'text-rose-600'
+                }`}
+              >
+                {trendDirection >= 0 ? '↑' : '↓'} {Math.abs(trendDirection)}
+              </span>
+            )}
+          </div>
+        </div>
+        <div className="bg-white rounded-2xl p-5 border border-gray-100">
+          <p className="text-sm text-gray-500">Jobs Saved</p>
+          <p className="text-3xl font-bold text-gray-800">{trackedJobsCount}</p>
+        </div>
+        <div className="bg-white rounded-2xl p-5 border border-gray-100">
+          <p className="text-sm text-gray-500">Saved Questions</p>
+          <p className="text-3xl font-bold text-gray-800">{savedQuestionsCount}</p>
+        </div>
+      </div>
+
       <div className="w-full max-w-6xl">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-3xl font-semibold text-gray-800">Your Resume Reviews</h2>
@@ -106,10 +191,81 @@ export default function Home() {
         )}
 
         {!loadingResumes && resumes.length > 0 && (
-          <div className="resumes-section">
-            {resumes.map((resume) => (
-              <ResumeCard key={resume.id} resume={resume} />
+          <div className="resumes-section items-stretch">
+            {sortedResumes.map((resume) => (
+              <div key={resume.id} className="flex flex-col gap-3">
+                <ResumeCard resume={resume} />
+                {canCompare && latestResume && resume.id !== latestResume.id && (
+                  <button
+                    type="button"
+                    className="px-4 py-2 rounded-full text-sm font-medium bg-white border border-gray-200 hover:bg-gray-50 transition-colors"
+                    onClick={() => setCompareTargetId(resume.id)}
+                  >
+                    Compare with Latest
+                  </button>
+                )}
+              </div>
             ))}
+          </div>
+        )}
+
+        {canCompare && latestResume && compareTarget && (
+          <div className="mt-8 bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
+            <div className="flex items-center justify-between gap-3 mb-5">
+              <h3 className="text-2xl font-semibold text-gray-800">Resume Comparison</h3>
+              <button
+                type="button"
+                className="px-4 py-2 rounded-full text-sm font-medium bg-gray-100 hover:bg-gray-200 transition-colors"
+                onClick={() => setCompareTargetId(null)}
+              >
+                Close
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-5">
+              <div className="rounded-2xl border border-gray-200 p-4">
+                <h4 className="text-lg font-semibold text-gray-800 mb-1">Selected Historical</h4>
+                <p className="text-sm text-gray-500">{formatAnalysisDate(compareTarget.analyzedAt)}</p>
+                <p className="text-sm text-gray-600 mt-1">
+                  {(compareTarget.companyName || 'Unknown company')} • {(compareTarget.jobTitle || 'Untitled role')}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-blue-200 bg-blue-50/40 p-4">
+                <h4 className="text-lg font-semibold text-gray-800 mb-1">Latest</h4>
+                <p className="text-sm text-gray-500">{formatAnalysisDate(latestResume.analyzedAt)}</p>
+                <p className="text-sm text-gray-600 mt-1">
+                  {(latestResume.companyName || 'Unknown company')} • {(latestResume.jobTitle || 'Untitled role')}
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <ScoreRow
+                label="Overall"
+                leftScore={compareTarget.feedback?.overallScore}
+                rightScore={latestResume.feedback?.overallScore}
+              />
+              <ScoreRow
+                label="Tone"
+                leftScore={compareTarget.feedback?.toneAndStyle?.score}
+                rightScore={latestResume.feedback?.toneAndStyle?.score}
+              />
+              <ScoreRow
+                label="Content"
+                leftScore={compareTarget.feedback?.content?.score}
+                rightScore={latestResume.feedback?.content?.score}
+              />
+              <ScoreRow
+                label="Structure"
+                leftScore={compareTarget.feedback?.structure?.score}
+                rightScore={latestResume.feedback?.structure?.score}
+              />
+              <ScoreRow
+                label="Skills"
+                leftScore={compareTarget.feedback?.skills?.score}
+                rightScore={latestResume.feedback?.skills?.score}
+              />
+            </div>
           </div>
         )}
 
@@ -129,5 +285,74 @@ export default function Home() {
         )}
       </div>
     </section>
+    {showOnboarding && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="absolute inset-0 bg-black/40" />
+        <div className="relative w-full max-w-xl rounded-2xl bg-white p-6 shadow-xl">
+          {onboardingStep === 1 && (
+            <div className="space-y-4">
+              <h3 className="text-2xl font-semibold text-gray-800">Welcome to SmartCV</h3>
+              <p className="text-gray-600">
+                You can analyze your resume, practice interview questions, and track job applications in one place.
+              </p>
+            </div>
+          )}
+          {onboardingStep === 2 && (
+            <div className="space-y-4">
+              <h3 className="text-2xl font-semibold text-gray-800">Start by uploading your resume</h3>
+              <p className="text-gray-600">Upload a resume to unlock ATS insights and personalized recommendations.</p>
+              <Link
+                to="/upload"
+                className="inline-block px-5 py-2 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 text-white font-medium"
+              >
+                Go to ATS Upload
+              </Link>
+            </div>
+          )}
+          {onboardingStep === 3 && (
+            <div className="space-y-4">
+              <h3 className="text-2xl font-semibold text-gray-800">You're all set!</h3>
+              <div className="flex flex-wrap gap-2">
+                <Link to="/upload" className="px-4 py-2 rounded-full bg-gray-100 text-gray-700">Analyze Resume</Link>
+                <Link to="/interview" className="px-4 py-2 rounded-full bg-gray-100 text-gray-700">Practice Interview</Link>
+                <Link to="/jobs" className="px-4 py-2 rounded-full bg-gray-100 text-gray-700">Search Jobs</Link>
+              </div>
+            </div>
+          )}
+          <div className="mt-6 flex items-center justify-between">
+            <button
+              type="button"
+              className="px-4 py-2 rounded-full bg-gray-100 text-gray-700 disabled:opacity-50"
+              disabled={onboardingStep === 1}
+              onClick={() => setOnboardingStep((step) => Math.max(1, step - 1))}
+            >
+              Back
+            </button>
+            {onboardingStep < 3 ? (
+              <button
+                type="button"
+                className="px-4 py-2 rounded-full bg-blue-600 text-white"
+                onClick={() => setOnboardingStep((step) => Math.min(3, step + 1))}
+              >
+                Next
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="px-4 py-2 rounded-full bg-blue-600 text-white"
+                onClick={async () => {
+                  await kv.set(ONBOARDING_KEY, 'true');
+                  setShowOnboarding(false);
+                }}
+              >
+                Finish
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    )}
   </main>
 }
+
+const ONBOARDING_KEY = 'smartcv_onboarding_complete';
